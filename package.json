@@ -1,0 +1,43 @@
+{
+  "name": "uiohook-napi",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alexander Drozdov"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SnosMe/uiohook-napi.git"
+  },
+  "keywords": [
+    "iohook",
+    "uiohook",
+    "libuiohook",
+    "hook",
+    "input",
+    "keyboard",
+    "mouse"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "install": "node-gyp-build",
+    "prebuild": "prebuildify --napi",
+    "build-ts": "tsc"
+  },
+  "files": [
+    "dist",
+    "binding.gyp",
+    "libuiohook",
+    "src/lib",
+    "prebuilds"
+  ],
+  "devDependencies": {
+    "@types/node": "12.x.x",
+    "prebuildify": "3.x.x",
+    "ts-node": "8.x.x",
+    "typescript": "3.x.x"
+  },
+  "dependencies": {
+    "node-gyp-build": "4.x.x"
+  }
+}
