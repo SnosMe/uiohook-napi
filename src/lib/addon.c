@@ -145,7 +145,9 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
   return NULL; // never
 }
 
-void tsfn_to_js_proxy(napi_env env, napi_value js_callback, void* context, uiohook_event* event) {
+void tsfn_to_js_proxy(napi_env env, napi_value js_callback, void* context, void* _event) {
+  uiohook_event* event = (uiohook_event*)_event;
+
   if (env == NULL || js_callback == NULL || is_worker_running == false) {
     free(event);
     return;
