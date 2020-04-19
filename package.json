@@ -1,6 +1,6 @@
 {
   "name": "uiohook-napi",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": {
     "name": "Alexander Drozdov"
   },
@@ -21,7 +21,6 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "preinstall": "yarn apply-libuiohook-patch",
     "install": "node-gyp-build",
     "prebuild": "prebuildify --napi",
     "build-ts": "tsc",
@@ -34,7 +33,6 @@
     "libuiohook/src",
     "libuiohook/include",
     "src/lib",
-    "src/libuiohook.patch",
     "prebuilds"
   ],
   "devDependencies": {
