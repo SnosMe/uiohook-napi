@@ -14,7 +14,7 @@ jobs:
         node-version: 12
     - run: |
         sudo apt-get update
-        sudo apt-get install -y libxrandr-dev
+        sudo apt-get install -y libxrandr-dev libxtst-dev
     - run: yarn --frozen-lockfile
     - run: yarn prebuild
     - uses: actions/upload-artifact@v1
