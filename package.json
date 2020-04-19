@@ -1,6 +1,6 @@
 {
   "name": "uiohook-napi",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Alexander Drozdov"
   },
@@ -8,6 +8,7 @@
     "type": "git",
     "url": "https://github.com/SnosMe/uiohook-napi.git"
   },
+  "license": "MIT",
   "keywords": [
     "iohook",
     "uiohook",
@@ -30,8 +31,10 @@
   "files": [
     "dist",
     "binding.gyp",
-    "libuiohook",
+    "libuiohook/src",
+    "libuiohook/include",
     "src/lib",
+    "src/libuiohook.patch",
     "prebuilds"
   ],
   "devDependencies": {
