@@ -1,0 +1,21 @@
+name: Prebuild
+
+on: push
+
+jobs:
+  linux:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: 12
+    - run: |
+        sudo apt-get update
+        sudo apt-get install -y libxrandr-dev
+    - run: yarn --frozen-lockfile
+    - run: yarn prebuild
+    - uses: actions/upload-artifact@v1
+      with:
+        name: linux
+        path: prebuilds
