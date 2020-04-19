@@ -1,3 +1,4 @@
 [submodule "libuiohook"]
 	path = libuiohook
 	url = https://github.com/kwhat/libuiohook
+	ignore = dirty
