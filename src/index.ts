@@ -219,16 +219,3 @@ class UiohookNapi extends EventEmitter {
 }
 
 export const uIOhook = new UiohookNapi()
-
-uIOhook.on('keydown', (e) => {
-  console.log(e.ctrlKey, e.keycode)
-  
-  if (e.keycode === 1) {
-    process.exit(0)
-  }
-})
-uIOhook.start()
-
-// setInterval(() => {
-//   // console.log('every 2s')
-// }, 2000)

@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "target": "ES2018",
     "alwaysStrict": true,
     "strict": true,
     "module": "CommonJS",
@@ -7,5 +8,11 @@
     "sourceMap": true,
     "outDir": "dist",
     "declaration": true
-  }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/demo.ts"
+  ]
 }
