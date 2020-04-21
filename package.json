@@ -1,6 +1,6 @@
 {
   "name": "uiohook-napi",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": {
     "name": "Alexander Drozdov"
   },
@@ -43,5 +43,9 @@
   },
   "dependencies": {
     "node-gyp-build": "4.x.x"
+  },
+  "gypfile": true,
+  "engines": {
+    "node": ">= 10"
   }
 }
