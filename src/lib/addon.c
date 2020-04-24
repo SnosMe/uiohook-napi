@@ -254,6 +254,12 @@ napi_value AddonStop(napi_env env, napi_callback_info info) {
   }
 }
 
+void AddonCleanUp (void* arg) {
+  if (is_worker_running) {
+    uiohook_worker_stop();
+  }
+}
+
 NAPI_MODULE_INIT() {
   napi_status status;
   napi_value export_fn;
@@ -267,6 +273,9 @@ NAPI_MODULE_INIT() {
   NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_create_function");
   status = napi_set_named_property(env, exports, "stop", export_fn);
   NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_set_named_property");
+
+  status = napi_add_env_cleanup_hook(env, AddonCleanUp, NULL);
+  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_add_env_cleanup_hook");
 
   return exports;
 }
