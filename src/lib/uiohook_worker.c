@@ -66,9 +66,11 @@ void worker_dispatch_proc(uiohook_event* const event) {
 
 	// Unlock the control mutex so hook_enable() can continue.
 	#ifdef _WIN32
+	EnterCriticalSection(&hook_control_mutex);
 	WakeConditionVariable(&hook_control_cond);
 	LeaveCriticalSection(&hook_control_mutex);
 	#else
+	pthread_mutex_lock(&hook_control_mutex);
 	pthread_cond_signal(&hook_control_cond);
 	pthread_mutex_unlock(&hook_control_mutex);
 	#endif
