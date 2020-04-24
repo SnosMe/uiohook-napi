@@ -187,18 +187,18 @@ napi_value AddonStart(napi_env env, napi_callback_info info) {
   status = napi_create_threadsafe_function(env, cb, NULL, async_resource_name, 0, 1, NULL, NULL, NULL, tsfn_to_js_proxy, &threadsafe_fn);
   NAPI_THROW_IF_FAILED(env, status, NULL);
 
-  is_worker_running = true;
   int worker_status = uiohook_worker_start(dispatch_proc);
-
+  
   if (worker_status != UIOHOOK_SUCCESS) {
-    is_worker_running = false;
     napi_release_threadsafe_function(threadsafe_fn, napi_tsfn_release);
     threadsafe_fn = NULL;
   }
 
   switch (worker_status) {
-  case UIOHOOK_SUCCESS:
+  case UIOHOOK_SUCCESS: {
+    is_worker_running = true;
     return NULL;
+  }
   case UIOHOOK_ERROR_THREAD_CREATE:
     NAPI_THROW(env, "UIOHOOK_ERROR_THREAD_CREATE", "Failed to create worker thread.", NULL);
   case UIOHOOK_ERROR_OUT_OF_MEMORY:
