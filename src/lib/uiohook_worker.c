@@ -7,6 +7,7 @@
 #include <windows.h>
 #else
 #include <pthread.h>
+#include <sched.h>
 #endif
 
 #include "uiohook_worker.h"
@@ -81,6 +82,26 @@ void worker_dispatch_proc(uiohook_event* const event) {
 }
 
 void hook_thread_proc(void* arg) {
+  #ifdef _WIN32
+  // Attempt to set the thread priority to time critical.
+  HANDLE this_thread = GetCurrentThread();
+  if (SetThreadPriority(this_thread, THREAD_PRIORITY_TIME_CRITICAL) == FALSE) {
+    logger_proc(LOG_LEVEL_WARN, "%s [%u]: Could not set thread priority %li for thread %#p! (%#lX)\n",
+      __FUNCTION__, __LINE__, (long)THREAD_PRIORITY_TIME_CRITICAL,
+      this_thread, (unsigned long)GetLastError());
+  }
+  #else
+  // Raise the thread priority
+  pthread_t this_thread = pthread_self();
+  struct sched_param params = {
+    .sched_priority = (sched_get_priority_max(SCHED_RR) / 2)
+  };
+  if (pthread_setschedparam(this_thread, SCHED_RR, &params) != 0) {
+    logger_proc(LOG_LEVEL_WARN, "%s [%u]: Could not set thread priority %i for thread 0x%lX!\n",
+      __FUNCTION__, __LINE__, params.sched_priority, (unsigned long)this_thread);
+  }
+  #endif
+
   // Set the hook status.
   hook_thread_status = hook_run();
 
@@ -99,16 +120,6 @@ int hook_enable() {
   int status = UIOHOOK_FAILURE;
 
   if (uv_thread_create(&hook_thread, hook_thread_proc, NULL) == 0) {
-    Sleep(100); // TODO: delete me after tests
-    #if defined(_WIN32)
-    // Attempt to set the thread priority to time critical.
-    if (SetThreadPriority(hook_thread, THREAD_PRIORITY_TIME_CRITICAL) == FALSE) {
-      logger_proc(LOG_LEVEL_WARN, "%s [%u]: Could not set thread priority %li for thread %#p! (%#lX)\n",
-        __FUNCTION__, __LINE__, (long)THREAD_PRIORITY_TIME_CRITICAL,
-        hook_thread, (unsigned long)GetLastError());
-    }
-    #endif
-
     // Wait for the thread to indicate that it has passed the 
     // initialization portion by blocking until either a EVENT_HOOK_ENABLED 
     // event is received or the thread terminates.
@@ -119,7 +130,7 @@ int hook_enable() {
       // was signaled!  This indicates that there was a startup problem!
 
       // Get the status back from the thread.
-      uv_thread_join(hook_thread);
+      uv_thread_join(&hook_thread);
       status = hook_thread_status;
     }
     else {
