@@ -38,10 +38,46 @@ index bce0642..d203779 100644
  
      return scancode;
 diff --git a/src/windows/input_hook.c b/src/windows/input_hook.c
-index 1fb7e71..5d72884 100644
+index 1fb7e71..7b56dcc 100644
 --- a/src/windows/input_hook.c
 +++ b/src/windows/input_hook.c
-@@ -91,24 +91,24 @@ static void initialize_modifiers() {
+@@ -27,10 +27,20 @@
+ #include "input_helper.h"
+ #include "logger.h"
+ 
++#ifndef FOREGROUND_TIMER_MS
++#define FOREGROUND_TIMER_MS 83 // 12 fps
++#endif
++
+ // Thread and hook handles.
+ static DWORD hook_thread_id = 0;
+ static HHOOK keyboard_event_hhook = NULL, mouse_event_hhook = NULL;
+-static HWINEVENTHOOK win_event_hhook = NULL;
++static HWINEVENTHOOK win_foreground_hhook = NULL, win_minimizeend_hhook = NULL;
++static UINT_PTR foreground_timer = 0;
++
++static HWND foreground_window = NULL;
++static bool is_blocked_by_uipi = true;
++
++static UINT WM_UIOHOOK_UIPI_TEST = WM_NULL;
+ 
+ // The handle to the DLL module pulled in DllMain on DLL_PROCESS_ATTACH.
+ extern HINSTANCE hInst;
+@@ -78,12 +88,7 @@ static inline void set_modifier_mask(unsigned short int mask) {
+ 
+ // Unset the native modifier mask for future events.
+ static inline void unset_modifier_mask(unsigned short int mask) {
+-    current_modifiers ^= mask;
+-}
+-
+-// Get the current native modifier mask state.
+-static inline unsigned short int get_modifiers() {
+-    return current_modifiers;
++    current_modifiers &= ~mask;
+ }
+ 
+ // Initialize the modifier mask to the current modifiers.
+@@ -91,26 +96,34 @@ static void initialize_modifiers() {
      current_modifiers = 0x0000;
  
      // NOTE We are checking the high order bit, so it will be < 0 for a singed short.
@@ -81,6 +117,178 @@ index 1fb7e71..5d72884 100644
 +    if (GetAsyncKeyState(VK_SCROLL)   < 0) { set_modifier_mask(MASK_SCROLL_LOCK); }
  }
  
++// Get the current native modifier mask state.
++static inline unsigned short int get_modifiers() {
++    if (is_blocked_by_uipi) {
++        initialize_modifiers();
++        is_blocked_by_uipi = false;
++    }
++    return current_modifiers;
++}
+ 
+ /* Retrieves the mouse wheel scroll type. This function cannot be included as
+  * part of the input_helper.h due to platform specific calling restrictions.
+@@ -146,11 +159,29 @@ static unsigned short int get_scroll_wheel_amount() {
+     return value;
+ }
+ 
++void check_and_update_uipi_state(HWND hwnd) {
++    SetLastError(ERROR_SUCCESS);
++    PostMessage(hwnd, WM_UIOHOOK_UIPI_TEST, 0, 0);
++    if (GetLastError() == ERROR_ACCESS_DENIED) {
++        is_blocked_by_uipi = true;
++    }
++}
++
+ void unregister_running_hooks() {
+     // Stop the event hook and any timer still running.
+-    if (win_event_hhook != NULL) {
+-        UnhookWinEvent(win_event_hhook);
+-        win_event_hhook = NULL;
++    if (win_foreground_hhook != NULL) {
++        UnhookWinEvent(win_foreground_hhook);
++        win_foreground_hhook = NULL;
++    }
++
++    if (win_minimizeend_hhook != NULL) {
++        UnhookWinEvent(win_minimizeend_hhook);
++        win_minimizeend_hhook = NULL;
++    }
++
++    if (foreground_timer != 0) {
++        KillTimer(NULL, foreground_timer);
++        foreground_timer = 0;
+     }
+ 
+     // Destroy the native hooks.
+@@ -226,31 +257,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
+     // Populate key pressed event.
+     dispatch_event(&event);
+ 
++    if ((event.mask & (MASK_CTRL)) &&
++        (event.mask & (MASK_ALT)) &&
++        (event.data.keyboard.keycode == VC_DELETE)) {
++        current_modifiers = 0;
++    }
++
+     // If the pressed event was not consumed...
+     if (event.reserved ^ 0x01) {
+-        // Buffer for unicode typed chars. No more than 2 needed.
+-        WCHAR buffer[2]; // = { WCH_NONE };
+-
+-        // If the pressed event was not consumed and a unicode char exists...
+-        SIZE_T count = keycode_to_unicode(kbhook->vkCode, buffer, sizeof(buffer));
+-        for (unsigned int i = 0; i < count; i++) {
+-            // Populate key typed event.
+-            event.time = kbhook->time;
+-            event.reserved = 0x00;
+-
+-            event.type = EVENT_KEY_TYPED;
+-            event.mask = get_modifiers();
+-
+-            event.data.keyboard.keycode = VC_UNDEFINED;
+-            event.data.keyboard.rawcode = kbhook->vkCode;
+-            event.data.keyboard.keychar = buffer[i];
+-
+-            logger(LOG_LEVEL_INFO, "%s [%u]: Key %#X typed. (%lc)\n",
+-                    __FUNCTION__, __LINE__, event.data.keyboard.keycode, (wint_t) event.data.keyboard.keychar);
+-
+-            // Fire key typed event.
+-            dispatch_event(&event);
+-        }
+     }
+ }
+ 
+@@ -614,40 +628,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
+ 
+ // Callback function that handles events.
+ void CALLBACK win_hook_event_proc(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
+-    switch (event) {
+-        case EVENT_OBJECT_NAMECHANGE:
+-            logger(LOG_LEVEL_INFO, "%s [%u]: Restarting Windows input hook on window event: %#X.\n",
+-                    __FUNCTION__, __LINE__, event);
++    foreground_window = hWnd;
++    check_and_update_uipi_state(hWnd);
++}
+ 
+-            // Remove any keyboard or mouse hooks that are still running.
+-            if (keyboard_event_hhook != NULL) {
+-                UnhookWindowsHookEx(keyboard_event_hhook);
+-            }
++static VOID CALLBACK foreground_timer_proc(HWND _hwnd, UINT msg, UINT_PTR timerId, DWORD dwmsEventTime)
++{
++    HWND system_foreground = GetForegroundWindow();
+ 
+-            if (mouse_event_hhook != NULL) {
+-                UnhookWindowsHookEx(mouse_event_hhook);
+-            }
+-
+-            // Restart the event hooks.
+-            keyboard_event_hhook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboard_hook_event_proc, hInst, 0);
+-            mouse_event_hhook = SetWindowsHookEx(WH_MOUSE_LL, mouse_hook_event_proc, hInst, 0);
+-
+-            // Re-initialize modifier masks.
+-            initialize_modifiers();
+-
+-            // FIXME We should compare the modifier mask before and after the restart
+-            // to determine if we should synthesize missing events.
+-
+-            // Check for event hook error.
+-            if (keyboard_event_hhook == NULL || mouse_event_hhook == NULL) {
+-                logger(LOG_LEVEL_ERROR, "%s [%u]: SetWindowsHookEx() failed! (%#lX)\n",
+-                        __FUNCTION__, __LINE__, (unsigned long) GetLastError());
+-            }
+-            break;
+-
+-        default:
+-            logger(LOG_LEVEL_INFO, "%s [%u]: Unhandled Windows window event: %#X.\n",
+-                    __FUNCTION__, __LINE__, event);
++    if (foreground_window != system_foreground) {
++        foreground_window = system_foreground;
++        check_and_update_uipi_state(system_foreground);
+     }
+ }
+ 
+@@ -680,17 +671,22 @@ UIOHOOK_API int hook_run() {
+     keyboard_event_hhook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboard_hook_event_proc, hInst, 0);
+     mouse_event_hhook = SetWindowsHookEx(WH_MOUSE_LL, mouse_hook_event_proc, hInst, 0);
+ 
+-    // Create a window event hook to listen for capture change.
+-    win_event_hhook = SetWinEventHook(
+-            EVENT_OBJECT_NAMECHANGE, EVENT_OBJECT_NAMECHANGE,
+-            NULL,
+-            win_hook_event_proc,
+-            0, 0,
+-            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
++    win_foreground_hhook = SetWinEventHook(
++            EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
++            NULL, win_hook_event_proc, 0, 0, WINEVENT_OUTOFCONTEXT);
++    win_minimizeend_hhook = SetWinEventHook(
++            EVENT_SYSTEM_MINIMIZEEND, EVENT_SYSTEM_MINIMIZEEND,
++            NULL, win_hook_event_proc, 0, 0, WINEVENT_OUTOFCONTEXT);
++    foreground_timer = SetTimer(NULL, 0, FOREGROUND_TIMER_MS, foreground_timer_proc);
++
++    WM_UIOHOOK_UIPI_TEST = RegisterWindowMessage("UIOHOOK_UIPI_TEST");
++
++    foreground_window = GetForegroundWindow();
++    is_blocked_by_uipi = true; // init modifiers
+ 
+     // If we did not encounter a problem, start processing events.
+     if (keyboard_event_hhook != NULL && mouse_event_hhook != NULL) {
+-        if (win_event_hhook == NULL) {
++        if (win_foreground_hhook == NULL || win_minimizeend_hhook == NULL) {
+             logger(LOG_LEVEL_WARN, "%s [%u]: SetWinEventHook() failed!\n",
+                     __FUNCTION__, __LINE__);
+         }
+@@ -698,9 +694,6 @@ UIOHOOK_API int hook_run() {
+         logger(LOG_LEVEL_DEBUG, "%s [%u]: SetWindowsHookEx() successful.\n",
+                 __FUNCTION__, __LINE__);
+ 
+-        // Check and setup modifiers.
+-        initialize_modifiers();
+-
+         // Set the exit status.
+         status = UIOHOOK_SUCCESS;
  
 diff --git a/src/x11/input_hook.c b/src/x11/input_hook.c
 index cd1037f..b1658b1 100644
