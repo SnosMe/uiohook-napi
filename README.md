@@ -1,4 +1,6 @@
-## uiohook-napi
+# uiohook-napi
+
+[![](https://img.shields.io/npm/v/uiohook-napi/latest?color=CC3534&label=uiohook-napi&logo=npm&labelColor=212121)](https://www.npmjs.com/package/uiohook-napi)
 
 N-API C-bindings for [libuiohook](https://github.com/kwhat/libuiohook).
 
