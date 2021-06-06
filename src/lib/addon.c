@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <node_api.h>
 #include <uiohook.h>
@@ -20,40 +21,44 @@ void dispatch_proc(uiohook_event* const event) {
     free(copied_event);
     return;
   }
-  NAPI_FATAL_IF_FAILED(status, "dispatch_proc", "napi_call_threadsafe_function");
+  NAPI_FATAL_IF_FAILED(NULL, status, "dispatch_proc", "napi_call_threadsafe_function");
 }
 
+/**
+ * Gets the translated event that can be passed into JS code.
+ * Returns NULL only if there's a pending JS exception.
+ */
 napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
   napi_status status;
 
   napi_value event_obj;
   status = napi_create_object(env, &event_obj);
-  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_object");
+  NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_object");
 
   napi_value e_type;
   status = napi_create_uint32(env, event->type, &e_type);
-  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+  NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
   napi_value e_altKey;
   status = napi_get_boolean(env, (event->mask & (MASK_ALT)), &e_altKey);
-  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_get_boolean");
+  NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_get_boolean");
 
   napi_value e_ctrlKey;
   status = napi_get_boolean(env, (event->mask & (MASK_CTRL)), &e_ctrlKey);
-  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_get_boolean");
+  NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_get_boolean");
 
   napi_value e_metaKey;
   status = napi_get_boolean(env, (event->mask & (MASK_META)), &e_metaKey);
-  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_get_boolean");
+  NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_get_boolean");
 
   napi_value e_shiftKey;
   status = napi_get_boolean(env, (event->mask & (MASK_SHIFT)), &e_shiftKey);
-  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_get_boolean");
+  NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_get_boolean");
 
   if (event->type == EVENT_KEY_PRESSED || event->type == EVENT_KEY_RELEASED) {
     napi_value e_keycode;
     status = napi_create_uint32(env, event->data.keyboard.keycode, &e_keycode);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_property_descriptor descriptors[] = {
       { "type",     NULL, NULL, NULL, NULL, e_type,     napi_enumerable, NULL },
@@ -64,25 +69,25 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
       { "keycode",  NULL, NULL, NULL, NULL, e_keycode,  napi_enumerable, NULL },
     };
     status = napi_define_properties(env, event_obj, sizeof(descriptors) / sizeof(descriptors[0]), descriptors);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_define_properties");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_define_properties");
     return event_obj;
   }
   else if (event->type == EVENT_MOUSE_MOVED || event->type == EVENT_MOUSE_PRESSED || event->type == EVENT_MOUSE_RELEASED || event->type == EVENT_MOUSE_CLICKED) {
     napi_value e_x;
     status = napi_create_int32(env, event->data.mouse.x, &e_x);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_int32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_int32");
 
     napi_value e_y;
     status = napi_create_int32(env, event->data.mouse.y, &e_y);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_int32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_int32");
 
     napi_value e_button;
     status = napi_create_uint32(env, event->data.mouse.button, &e_button);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_value e_clicks;
     status = napi_create_uint32(env, event->data.mouse.clicks, &e_clicks);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_property_descriptor descriptors[] = {
       { "type",     NULL, NULL, NULL, NULL, e_type,     napi_enumerable, NULL },
@@ -96,33 +101,33 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
       { "clicks",   NULL, NULL, NULL, NULL, e_clicks,   napi_enumerable, NULL },
     };
     status = napi_define_properties(env, event_obj, sizeof(descriptors) / sizeof(descriptors[0]), descriptors);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_define_properties");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_define_properties");
     return event_obj;
   }
   else if (event->type == EVENT_MOUSE_WHEEL) {
     napi_value e_x;
     status = napi_create_int32(env, event->data.wheel.x, &e_x);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_int32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_int32");
 
     napi_value e_y;
     status = napi_create_int32(env, event->data.wheel.y, &e_y);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_int32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_int32");
 
     napi_value e_clicks;
     status = napi_create_uint32(env, event->data.wheel.clicks, &e_clicks);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_value e_amount;
     status = napi_create_uint32(env, event->data.wheel.amount, &e_amount);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_value e_direction;
     status = napi_create_uint32(env, event->data.wheel.direction, &e_direction);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_value e_rotation;
     status = napi_create_int32(env, event->data.wheel.rotation, &e_rotation);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_int32");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_create_int32");
 
     napi_property_descriptor descriptors[] = {
       { "type",      NULL, NULL, NULL, NULL, e_type,      napi_enumerable, NULL },
@@ -138,7 +143,7 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
       { "rotation",  NULL, NULL, NULL, NULL, e_rotation,  napi_enumerable, NULL },
     };
     status = napi_define_properties(env, event_obj, sizeof(descriptors) / sizeof(descriptors[0]), descriptors);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_define_properties");
+    NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, "uiohook_to_js_event", "napi_define_properties");
     return event_obj;
   }
 
@@ -156,13 +161,17 @@ void tsfn_to_js_proxy(napi_env env, napi_value js_callback, void* context, void*
   napi_status status;
 
   napi_value event_obj = uiohook_to_js_event(env, event);
+  if (event_obj == NULL) {
+    // A Javascript exception is pending. Just return
+    return;
+  }
 
   napi_value global;
   status = napi_get_global(env, &global);
-  NAPI_FATAL_IF_FAILED(status, "tsfn_to_js_proxy", "napi_get_global");
+  NAPI_FATAL_IF_FAILED(env, status, "tsfn_to_js_proxy", "napi_get_global");
 
   status = napi_call_function(env, global, js_callback, 1, &event_obj, NULL);
-  NAPI_FATAL_IF_FAILED(status, "tsfn_to_js_proxy", "napi_call_function");
+  NAPI_FATAL_IF_FAILED(env, status, "tsfn_to_js_proxy", "napi_call_function");
 
   free(event);
 }
@@ -265,17 +274,17 @@ NAPI_MODULE_INIT() {
   napi_value export_fn;
 
   status = napi_create_function(env, NULL, 0, AddonStart, NULL, &export_fn);
-  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_create_function");
+  NAPI_FATAL_IF_FAILED(env, status, "NAPI_MODULE_INIT", "napi_create_function");
   status = napi_set_named_property(env, exports, "start", export_fn);
-  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_set_named_property");
+  NAPI_FATAL_IF_FAILED(env, status, "NAPI_MODULE_INIT", "napi_set_named_property");
 
   status = napi_create_function(env, NULL, 0, AddonStop, NULL, &export_fn);
-  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_create_function");
+  NAPI_FATAL_IF_FAILED(env, status, "NAPI_MODULE_INIT", "napi_create_function");
   status = napi_set_named_property(env, exports, "stop", export_fn);
-  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_set_named_property");
+  NAPI_FATAL_IF_FAILED(env, status, "NAPI_MODULE_INIT", "napi_set_named_property");
 
   status = napi_add_env_cleanup_hook(env, AddonCleanUp, NULL);
-  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_add_env_cleanup_hook");
+  NAPI_FATAL_IF_FAILED(env, status, "NAPI_MODULE_INIT", "napi_add_env_cleanup_hook");
 
   return exports;
 }
