@@ -24,7 +24,7 @@
     "install": "node-gyp-build",
     "prebuild": "prebuildify --napi",
     "build-ts": "tsc",
-    "make-libuiohook-patch": "git -C ./libuiohook diff > ./src/libuiohook.patch",
+    "make-libuiohook-patch": "git -C ./libuiohook diff --cached > ./src/libuiohook.patch",
     "apply-libuiohook-patch": "git -C ./libuiohook apply ../src/libuiohook.patch"
   },
   "files": [
