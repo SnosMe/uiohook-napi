@@ -6,6 +6,10 @@
 
 // Return NULL on pending exception, or fatally error on
 // all other errors.
+//
+// This allows us to return control to JS code ASAP, as
+// recommended by:
+// https://nodejs.org/api/n-api.html#:~:text=when%20an%20exception%20is%20pending
 #define NAPI_RETURN_NULL_OR_FATAL_IF_FAILED(env, status, \
   location, message)                                     \
   do {                                                   \
