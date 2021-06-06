@@ -21,7 +21,7 @@ void dispatch_proc(uiohook_event* const event) {
     free(copied_event);
     return;
   }
-  NAPI_FATAL_IF_FAILED(NULL, status, "dispatch_proc", "napi_call_threadsafe_function");
+  NAPI_RETURN_OR_FATAL_IF_FAILED(NULL, status, "dispatch_proc", "napi_call_threadsafe_function");
 }
 
 /**
@@ -168,10 +168,16 @@ void tsfn_to_js_proxy(napi_env env, napi_value js_callback, void* context, void*
 
   napi_value global;
   status = napi_get_global(env, &global);
-  NAPI_FATAL_IF_FAILED(env, status, "tsfn_to_js_proxy", "napi_get_global");
+  if (status != napi_ok) {
+    free(event);
+    NAPI_RETURN_OR_FATAL_IF_FAILED(env, status, "tsfn_to_js_proxy", "napi_get_global");
+  }
 
   status = napi_call_function(env, global, js_callback, 1, &event_obj, NULL);
-  NAPI_FATAL_IF_FAILED(env, status, "tsfn_to_js_proxy", "napi_call_function");
+  if (status != napi_ok) {
+    free(event);
+    NAPI_RETURN_OR_FATAL_IF_FAILED(env, status, "tsfn_to_js_proxy", "napi_call_function");
+  }
 
   free(event);
 }

@@ -20,6 +20,16 @@
       message);                                          \
   } while (0)
 
+#define NAPI_RETURN_OR_FATAL_IF_FAILED(env, status,      \
+  location, message)                                     \
+  do {                                                   \
+    if ((status) == napi_pending_exception) {            \
+      return;                                            \
+    }                                                    \
+    NAPI_FATAL_IF_FAILED(env, status, location,          \
+      message);                                          \
+  } while (0)
+
 #define NAPI_FATAL_IF_FAILED(env, status, location,      \
   message)                                               \
   do {                                                   \
