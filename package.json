@@ -24,6 +24,7 @@
     "install": "node-gyp-build",
     "prebuild": "prebuildify --napi",
     "build-ts": "tsc",
+    "demo": "ts-node src/demo.ts",
     "make-libuiohook-patch": "git -C ./libuiohook diff --cached > ./src/libuiohook.patch",
     "apply-libuiohook-patch": "git -C ./libuiohook apply ../src/libuiohook.patch"
   },
@@ -36,9 +37,9 @@
     "prebuilds"
   ],
   "devDependencies": {
-    "@types/node": "14.x.x",
-    "prebuildify": "4.x.x",
-    "ts-node": "9.x.x",
+    "@types/node": "16.x.x",
+    "prebuildify": "5.x.x",
+    "ts-node": "10.x.x",
     "typescript": "4.x.x"
   },
   "dependencies": {
@@ -49,6 +50,6 @@
   },
   "gypfile": true,
   "engines": {
-    "node": ">= 12"
+    "node": ">= 16"
   }
 }
