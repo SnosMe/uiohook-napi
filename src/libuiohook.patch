@@ -38,7 +38,7 @@ index 8242916..d4acd5f 100644
  
      return scancode;
 diff --git a/src/windows/input_hook.c b/src/windows/input_hook.c
-index b9e9161..1963271 100644
+index b9e9161..048cf0f 100644
 --- a/src/windows/input_hook.c
 +++ b/src/windows/input_hook.c
 @@ -23,10 +23,20 @@
@@ -63,7 +63,15 @@ index b9e9161..1963271 100644
  
  // The handle to the DLL module pulled in DllMain on DLL_PROCESS_ATTACH.
  extern HINSTANCE hInst;
-@@ -79,6 +89,10 @@ static inline void unset_modifier_mask(unsigned short int mask) {
+@@ -66,6 +76,7 @@ static inline void dispatch_event(uiohook_event *const event) {
+     }
+ }
+ 
++static void initialize_modifiers();
+ 
+ // Set the native modifier mask for future events.
+ static inline void set_modifier_mask(unsigned short int mask) {
+@@ -79,6 +90,10 @@ static inline void unset_modifier_mask(unsigned short int mask) {
  
  // Get the current native modifier mask state.
  static inline unsigned short int get_modifiers() {
@@ -74,7 +82,7 @@ index b9e9161..1963271 100644
      return current_modifiers;
  }
  
-@@ -87,27 +101,26 @@ static void initialize_modifiers() {
+@@ -87,27 +102,26 @@ static void initialize_modifiers() {
      current_modifiers = 0x0000;
  
      // NOTE We are checking the high order bit, so it will be < 0 for a singed short.
@@ -120,7 +128,7 @@ index b9e9161..1963271 100644
  /* Retrieves the mouse wheel scroll type. This function cannot be included as
   * part of the input_helper.h due to platform specific calling restrictions.
   */
-@@ -142,11 +155,29 @@ static uint16_t get_scroll_wheel_amount() {
+@@ -142,11 +156,29 @@ static uint16_t get_scroll_wheel_amount() {
      return value;
  }
  
@@ -153,7 +161,7 @@ index b9e9161..1963271 100644
      }
  
      // Destroy the native hooks.
-@@ -228,31 +259,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
+@@ -228,31 +260,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
      // Populate key pressed event.
      dispatch_event(&event);
  
@@ -191,7 +199,7 @@ index b9e9161..1963271 100644
      }
  }
  
-@@ -621,40 +635,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
+@@ -621,40 +636,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
  
  // Callback function that handles events.
  void CALLBACK win_hook_event_proc(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
@@ -241,7 +249,7 @@ index b9e9161..1963271 100644
      }
  }
  
-@@ -687,17 +678,22 @@ UIOHOOK_API int hook_run() {
+@@ -687,17 +679,22 @@ UIOHOOK_API int hook_run() {
      keyboard_event_hhook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboard_hook_event_proc, hInst, 0);
      mouse_event_hhook = SetWindowsHookEx(WH_MOUSE_LL, mouse_hook_event_proc, hInst, 0);
  
@@ -272,7 +280,7 @@ index b9e9161..1963271 100644
              logger(LOG_LEVEL_WARN, "%s [%u]: SetWinEventHook() failed!\n",
                      __FUNCTION__, __LINE__);
          }
-@@ -705,9 +701,6 @@ UIOHOOK_API int hook_run() {
+@@ -705,9 +702,6 @@ UIOHOOK_API int hook_run() {
          logger(LOG_LEVEL_DEBUG, "%s [%u]: SetWindowsHookEx() successful.\n",
                  __FUNCTION__, __LINE__);
  
@@ -282,3 +290,19 @@ index b9e9161..1963271 100644
          // Set the exit status.
          status = UIOHOOK_SUCCESS;
  
+diff --git a/src/x11/input_hook.c b/src/x11/input_hook.c
+index 3d00990..fa5e1d4 100644
+--- a/src/x11/input_hook.c
++++ b/src/x11/input_hook.c
+@@ -26,8 +26,11 @@
+ #include <stdint.h>
+ #include <uiohook.h>
+ 
++#ifdef USE_XKB_COMMON
+ #include <xcb/xkb.h>
++#else
+ #include <X11/XKBlib.h>
++#endif
+ 
+ #include <X11/keysym.h>
+ #include <X11/Xlibint.h>
