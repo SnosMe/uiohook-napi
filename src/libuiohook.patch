@@ -1,14 +1,14 @@
 diff --git a/src/windows/input_helper.c b/src/windows/input_helper.c
-index bce0642..d203779 100644
+index 8242916..d4acd5f 100644
 --- a/src/windows/input_helper.c
 +++ b/src/windows/input_helper.c
-@@ -303,34 +303,6 @@ unsigned short keycode_to_scancode(DWORD vk_code, DWORD flags) {
+@@ -297,34 +297,6 @@ unsigned short keycode_to_scancode(DWORD vk_code, DWORD flags) {
      // NOTE vk_code >= 0 is assumed because DWORD is unsigned.
      if (vk_code < sizeof(keycode_scancode_table) / sizeof(keycode_scancode_table[0])) {
          scancode = keycode_scancode_table[vk_code][0];
 -
 -        if (flags & LLKHF_EXTENDED) {
--            logger(LOG_LEVEL_DEBUG,    "%s [%u]: Using extended lookup for vk_code: %li\n",
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Using extended lookup for vk_code: %li\n",
 -                    __FUNCTION__, __LINE__, vk_code);
 -
 -            switch (vk_code) {
@@ -31,17 +31,17 @@ index bce0642..d203779 100644
 -                    break;
 -            }
 -        } else {
--            logger(LOG_LEVEL_DEBUG,    "%s [%u]: Using normal lookup for vk_code: %li\n",
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Using normal lookup for vk_code: %li\n",
 -                    __FUNCTION__, __LINE__, vk_code);
 -        }
      }
  
      return scancode;
 diff --git a/src/windows/input_hook.c b/src/windows/input_hook.c
-index 1fb7e71..7b56dcc 100644
+index b9e9161..1963271 100644
 --- a/src/windows/input_hook.c
 +++ b/src/windows/input_hook.c
-@@ -27,10 +27,20 @@
+@@ -23,10 +23,20 @@
  #include "input_helper.h"
  #include "logger.h"
  
@@ -63,21 +63,18 @@ index 1fb7e71..7b56dcc 100644
  
  // The handle to the DLL module pulled in DllMain on DLL_PROCESS_ATTACH.
  extern HINSTANCE hInst;
-@@ -78,12 +88,7 @@ static inline void set_modifier_mask(unsigned short int mask) {
+@@ -79,6 +89,10 @@ static inline void unset_modifier_mask(unsigned short int mask) {
  
- // Unset the native modifier mask for future events.
- static inline void unset_modifier_mask(unsigned short int mask) {
--    current_modifiers ^= mask;
--}
--
--// Get the current native modifier mask state.
--static inline unsigned short int get_modifiers() {
--    return current_modifiers;
-+    current_modifiers &= ~mask;
+ // Get the current native modifier mask state.
+ static inline unsigned short int get_modifiers() {
++    if (is_blocked_by_uipi) {
++        initialize_modifiers();
++        is_blocked_by_uipi = false;
++    }
+     return current_modifiers;
  }
  
- // Initialize the modifier mask to the current modifiers.
-@@ -91,26 +96,34 @@ static void initialize_modifiers() {
+@@ -87,27 +101,26 @@ static void initialize_modifiers() {
      current_modifiers = 0x0000;
  
      // NOTE We are checking the high order bit, so it will be < 0 for a singed short.
@@ -89,6 +86,16 @@ index 1fb7e71..7b56dcc 100644
 -    if (GetKeyState(VK_RMENU)    < 0) { set_modifier_mask(MASK_ALT_R);       }
 -    if (GetKeyState(VK_LWIN)     < 0) { set_modifier_mask(MASK_META_L);      }
 -    if (GetKeyState(VK_RWIN)     < 0) { set_modifier_mask(MASK_META_R);      }
+-
+-    if (GetKeyState(VK_LBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON1);     }
+-    if (GetKeyState(VK_RBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON2);     }
+-    if (GetKeyState(VK_MBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON3);     }
+-    if (GetKeyState(VK_XBUTTON1) < 0) { set_modifier_mask(MASK_BUTTON4);     }
+-    if (GetKeyState(VK_XBUTTON2) < 0) { set_modifier_mask(MASK_BUTTON5);     }
+-
+-    if (GetKeyState(VK_NUMLOCK)  < 0) { set_modifier_mask(MASK_NUM_LOCK);    }
+-    if (GetKeyState(VK_CAPITAL)  < 0) { set_modifier_mask(MASK_CAPS_LOCK);   }
+-    if (GetKeyState(VK_SCROLL)   < 0) { set_modifier_mask(MASK_SCROLL_LOCK); }
 +    if (GetAsyncKeyState(VK_LSHIFT)   < 0) { set_modifier_mask(MASK_SHIFT_L);     }
 +    if (GetAsyncKeyState(VK_RSHIFT)   < 0) { set_modifier_mask(MASK_SHIFT_R);     }
 +    if (GetAsyncKeyState(VK_LCONTROL) < 0) { set_modifier_mask(MASK_CTRL_L);      }
@@ -97,38 +104,23 @@ index 1fb7e71..7b56dcc 100644
 +    if (GetAsyncKeyState(VK_RMENU)    < 0) { set_modifier_mask(MASK_ALT_R);       }
 +    if (GetAsyncKeyState(VK_LWIN)     < 0) { set_modifier_mask(MASK_META_L);      }
 +    if (GetAsyncKeyState(VK_RWIN)     < 0) { set_modifier_mask(MASK_META_R);      }
- 
--    if (GetKeyState(VK_LBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON1);     }
--    if (GetKeyState(VK_RBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON2);     }
--    if (GetKeyState(VK_MBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON3);     }
--    if (GetKeyState(VK_XBUTTON1) < 0) { set_modifier_mask(MASK_BUTTON4);     }
--    if (GetKeyState(VK_XBUTTON2) < 0) { set_modifier_mask(MASK_BUTTON5);     }
++
 +    if (GetAsyncKeyState(VK_LBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON1);     }
 +    if (GetAsyncKeyState(VK_RBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON2);     }
 +    if (GetAsyncKeyState(VK_MBUTTON)  < 0) { set_modifier_mask(MASK_BUTTON3);     }
 +    if (GetAsyncKeyState(VK_XBUTTON1) < 0) { set_modifier_mask(MASK_BUTTON4);     }
 +    if (GetAsyncKeyState(VK_XBUTTON2) < 0) { set_modifier_mask(MASK_BUTTON5);     }
- 
--    if (GetKeyState(VK_NUMLOCK)  < 0) { set_modifier_mask(MASK_NUM_LOCK);    }
--    if (GetKeyState(VK_CAPITAL)  < 0) { set_modifier_mask(MASK_CAPS_LOCK);   }
--    if (GetKeyState(VK_SCROLL)   < 0) { set_modifier_mask(MASK_SCROLL_LOCK); }
++
 +    if (GetAsyncKeyState(VK_NUMLOCK)  < 0) { set_modifier_mask(MASK_NUM_LOCK);    }
 +    if (GetAsyncKeyState(VK_CAPITAL)  < 0) { set_modifier_mask(MASK_CAPS_LOCK);   }
 +    if (GetAsyncKeyState(VK_SCROLL)   < 0) { set_modifier_mask(MASK_SCROLL_LOCK); }
  }
  
-+// Get the current native modifier mask state.
-+static inline unsigned short int get_modifiers() {
-+    if (is_blocked_by_uipi) {
-+        initialize_modifiers();
-+        is_blocked_by_uipi = false;
-+    }
-+    return current_modifiers;
-+}
- 
+-
  /* Retrieves the mouse wheel scroll type. This function cannot be included as
   * part of the input_helper.h due to platform specific calling restrictions.
-@@ -146,11 +159,29 @@ static unsigned short int get_scroll_wheel_amount() {
+  */
+@@ -142,11 +155,29 @@ static uint16_t get_scroll_wheel_amount() {
      return value;
  }
  
@@ -161,7 +153,7 @@ index 1fb7e71..7b56dcc 100644
      }
  
      // Destroy the native hooks.
-@@ -226,31 +257,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
+@@ -228,31 +259,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
      // Populate key pressed event.
      dispatch_event(&event);
  
@@ -187,10 +179,10 @@ index 1fb7e71..7b56dcc 100644
 -            event.mask = get_modifiers();
 -
 -            event.data.keyboard.keycode = VC_UNDEFINED;
--            event.data.keyboard.rawcode = kbhook->vkCode;
+-            event.data.keyboard.rawcode = (uint16_t) kbhook->vkCode;
 -            event.data.keyboard.keychar = buffer[i];
 -
--            logger(LOG_LEVEL_INFO, "%s [%u]: Key %#X typed. (%lc)\n",
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Key %#X typed. (%lc)\n",
 -                    __FUNCTION__, __LINE__, event.data.keyboard.keycode, (wint_t) event.data.keyboard.keychar);
 -
 -            // Fire key typed event.
@@ -199,26 +191,20 @@ index 1fb7e71..7b56dcc 100644
      }
  }
  
-@@ -614,40 +628,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
+@@ -621,40 +635,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
  
  // Callback function that handles events.
  void CALLBACK win_hook_event_proc(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
 -    switch (event) {
 -        case EVENT_OBJECT_NAMECHANGE:
--            logger(LOG_LEVEL_INFO, "%s [%u]: Restarting Windows input hook on window event: %#X.\n",
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Restarting Windows input hook on window event: %#X.\n",
 -                    __FUNCTION__, __LINE__, event);
-+    foreground_window = hWnd;
-+    check_and_update_uipi_state(hWnd);
-+}
- 
+-
 -            // Remove any keyboard or mouse hooks that are still running.
 -            if (keyboard_event_hhook != NULL) {
 -                UnhookWindowsHookEx(keyboard_event_hhook);
 -            }
-+static VOID CALLBACK foreground_timer_proc(HWND _hwnd, UINT msg, UINT_PTR timerId, DWORD dwmsEventTime)
-+{
-+    HWND system_foreground = GetForegroundWindow();
- 
+-
 -            if (mouse_event_hhook != NULL) {
 -                UnhookWindowsHookEx(mouse_event_hhook);
 -            }
@@ -232,16 +218,22 @@ index 1fb7e71..7b56dcc 100644
 -
 -            // FIXME We should compare the modifier mask before and after the restart
 -            // to determine if we should synthesize missing events.
--
++    foreground_window = hWnd;
++    check_and_update_uipi_state(hWnd);
++}
+ 
 -            // Check for event hook error.
 -            if (keyboard_event_hhook == NULL || mouse_event_hhook == NULL) {
 -                logger(LOG_LEVEL_ERROR, "%s [%u]: SetWindowsHookEx() failed! (%#lX)\n",
 -                        __FUNCTION__, __LINE__, (unsigned long) GetLastError());
 -            }
 -            break;
--
++static VOID CALLBACK foreground_timer_proc(HWND _hwnd, UINT msg, UINT_PTR timerId, DWORD dwmsEventTime)
++{
++    HWND system_foreground = GetForegroundWindow();
+ 
 -        default:
--            logger(LOG_LEVEL_INFO, "%s [%u]: Unhandled Windows window event: %#X.\n",
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Unhandled Windows window event: %#X.\n",
 -                    __FUNCTION__, __LINE__, event);
 +    if (foreground_window != system_foreground) {
 +        foreground_window = system_foreground;
@@ -249,7 +241,7 @@ index 1fb7e71..7b56dcc 100644
      }
  }
  
-@@ -680,17 +671,22 @@ UIOHOOK_API int hook_run() {
+@@ -687,17 +678,22 @@ UIOHOOK_API int hook_run() {
      keyboard_event_hhook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboard_hook_event_proc, hInst, 0);
      mouse_event_hhook = SetWindowsHookEx(WH_MOUSE_LL, mouse_hook_event_proc, hInst, 0);
  
@@ -280,7 +272,7 @@ index 1fb7e71..7b56dcc 100644
              logger(LOG_LEVEL_WARN, "%s [%u]: SetWinEventHook() failed!\n",
                      __FUNCTION__, __LINE__);
          }
-@@ -698,9 +694,6 @@ UIOHOOK_API int hook_run() {
+@@ -705,9 +701,6 @@ UIOHOOK_API int hook_run() {
          logger(LOG_LEVEL_DEBUG, "%s [%u]: SetWindowsHookEx() successful.\n",
                  __FUNCTION__, __LINE__);
  
@@ -290,19 +282,3 @@ index 1fb7e71..7b56dcc 100644
          // Set the exit status.
          status = UIOHOOK_SUCCESS;
  
-diff --git a/src/x11/input_hook.c b/src/x11/input_hook.c
-index cd1037f..b1658b1 100644
---- a/src/x11/input_hook.c
-+++ b/src/x11/input_hook.c
-@@ -30,8 +30,11 @@
- #include <stdint.h>
- #include <uiohook.h>
- 
-+#ifdef USE_XKBCOMMON
- #include <xcb/xkb.h>
-+#else
- #include <X11/XKBlib.h>
-+#endif
- 
- #include <X11/keysym.h>
- #include <X11/Xlibint.h>
