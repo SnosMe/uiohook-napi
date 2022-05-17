@@ -164,8 +164,13 @@ export const UiohookKey = {
   BracketRight: 0x001B,
   Quote: 0x0028,
   Ctrl: 0x001D, // Left
+  CtrlRight: 0x0E1D,
   Alt: 0x0038, // Left
+  AltRight: 0x0E38,
   Shift: 0x002A // Left
+  ShiftRight: 0x0036,
+  Meta: 0x0E5B,
+  MetaRight: 0x0E5C
 } as const
 
 declare interface UiohookNapi {
