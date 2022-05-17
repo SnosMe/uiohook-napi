@@ -167,7 +167,7 @@ export const UiohookKey = {
   CtrlRight: 0x0E1D,
   Alt: 0x0038, // Left
   AltRight: 0x0E38,
-  Shift: 0x002A // Left
+  Shift: 0x002A, // Left
   ShiftRight: 0x0036,
   Meta: 0x0E5B,
   MetaRight: 0x0E5C
