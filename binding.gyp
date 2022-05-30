@@ -62,6 +62,9 @@
           "link_settings": {
             "libraries": [
               "-framework IOKit",
+              "-framework Carbon",
+              "-framework ApplicationServices",
+              "-framework AppKit",
               "-framework CoreFoundation"
             ],
           },
