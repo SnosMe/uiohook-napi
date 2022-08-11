@@ -38,6 +38,9 @@ interface UiohookNapi {
   on(event: 'click', listener: (e: UiohookMouseEvent) => void): this
 
   on(event: 'wheel', listener: (e: UiohookWheelEvent) => void): this
+
+  keyTap(key: keycode, modifiers?: keycode[])
+  keyToggle(key: keycode, toggle: 'down' | 'up')
 }
 
 export interface UiohookKeyboardEvent {

@@ -12,7 +12,8 @@ jobs:
     - uses: actions/setup-node@v3
     - run: yarn apply-libuiohook-patch
     - run: yarn --frozen-lockfile
-    - run: yarn prebuild
+    - run: yarn prebuild --arch x64
+    - run: yarn prebuild --arch arm64
     - uses: actions/upload-artifact@v3
       with:
         name: windows
@@ -30,7 +31,8 @@ jobs:
         sudo apt-get install -y libxrandr-dev libxtst-dev
     - run: yarn apply-libuiohook-patch
     - run: yarn --frozen-lockfile
-    - run: yarn prebuild
+    - run: yarn prebuild --arch x64
+    - run: yarn prebuild --arch arm64
     - uses: actions/upload-artifact@v3
       with:
         name: linux
