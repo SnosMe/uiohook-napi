@@ -14,7 +14,7 @@ const keycodeMap = new Map(Object.entries(UiohookKey).map(_ => [_[1], _[0]]))
       process.exit(0)
     }
   })
-  
+
   uIOhook.start()
 })()
 

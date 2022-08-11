@@ -188,7 +188,7 @@ napi_value AddonStart(napi_env env, napi_callback_info info) {
   NAPI_THROW_IF_FAILED(env, status, NULL);
 
   int worker_status = uiohook_worker_start(dispatch_proc);
-  
+
   if (worker_status != UIOHOOK_SUCCESS) {
     napi_release_threadsafe_function(threadsafe_fn, napi_tsfn_release);
     threadsafe_fn = NULL;
@@ -260,6 +260,47 @@ void AddonCleanUp (void* arg) {
   }
 }
 
+typedef enum {
+  key_tap,
+  key_down,
+  key_up,
+  force_uint = 0xFFFFFFFF
+} key_tap_type;
+
+napi_value AddonKeyTap (napi_env env, napi_callback_info info) {
+  napi_status status;
+
+  size_t info_argc = 2;
+  napi_value info_argv[2];
+  status = napi_get_cb_info(env, info, &info_argc, info_argv, NULL, NULL);
+  NAPI_THROW_IF_FAILED(env, status, NULL);
+
+  // [0] KeyCode
+  uint32_t keycode;
+  status = napi_get_value_uint32(env, info_argv[0], &keycode);
+  NAPI_THROW_IF_FAILED(env, status, NULL);
+
+  // [1] KeyTapType
+  key_tap_type tap_type;
+  status = napi_get_value_uint32(env, info_argv[1], (int32_t*)&tap_type);
+  NAPI_THROW_IF_FAILED(env, status, NULL);
+
+  uiohook_event event;
+  memset(&event, 0, sizeof(event));
+  event.data.keyboard.keycode = keycode;
+
+  if (tap_type != key_up) {
+    event.type = EVENT_KEY_PRESSED;
+    hook_post_event(&event);
+  }
+  if (tap_type != key_down) {
+    event.type = EVENT_KEY_RELEASED;
+    hook_post_event(&event);
+  }
+
+  return NULL;
+}
+
 NAPI_MODULE_INIT() {
   napi_status status;
   napi_value export_fn;
@@ -272,6 +313,11 @@ NAPI_MODULE_INIT() {
   status = napi_create_function(env, NULL, 0, AddonStop, NULL, &export_fn);
   NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_create_function");
   status = napi_set_named_property(env, exports, "stop", export_fn);
+  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_set_named_property");
+
+  status = napi_create_function(env, NULL, 0, AddonKeyTap, NULL, &export_fn);
+  NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_create_function");
+  status = napi_set_named_property(env, exports, "keyTap", export_fn);
   NAPI_FATAL_IF_FAILED(status, "NAPI_MODULE_INIT", "napi_set_named_property");
 
   status = napi_add_env_cleanup_hook(env, AddonCleanUp, NULL);

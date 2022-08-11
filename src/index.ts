@@ -3,8 +3,15 @@ import { join } from 'path'
 const lib: AddonExports = require('node-gyp-build')(join(__dirname, '..'))
 
 interface AddonExports {
-  start(cb: (e: any) => void): void
-  stop(): void
+  start (cb: (e: any) => void): void
+  stop (): void
+  keyTap (key: number, type: KeyToggle): void
+}
+
+enum KeyToggle {
+  Tap = 0,
+  Down = 1,
+  Up = 2
 }
 
 export enum EventType {
@@ -221,6 +228,26 @@ class UiohookNapi extends EventEmitter {
 
   stop () {
     lib.stop()
+  }
+
+  keyTap (key: number, modifiers: number[] = []) {
+    if (!modifiers.length) {
+      lib.keyTap(key, KeyToggle.Tap)
+      return
+    }
+
+    for (const modKey of modifiers) {
+      lib.keyTap(modKey, KeyToggle.Down)
+    }
+    lib.keyTap(key, KeyToggle.Tap)
+    let i = modifiers.length
+    while (i--) {
+      lib.keyTap(modifiers[i], KeyToggle.Up)
+    }
+  }
+
+  keyToggle (key: number, toggle: 'down' | 'up') {
+    lib.keyTap(key, (toggle === 'down' ? KeyToggle.Down : KeyToggle.Up))
   }
 }
 
