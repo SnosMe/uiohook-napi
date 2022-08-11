@@ -37,7 +37,7 @@
     "prebuilds"
   ],
   "devDependencies": {
-    "@types/node": "16.x.x",
+    "@types/node": "18.x.x",
     "prebuildify": "5.x.x",
     "ts-node": "10.x.x",
     "typescript": "4.x.x"

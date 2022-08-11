@@ -13,7 +13,7 @@ jobs:
     - run: yarn apply-libuiohook-patch
     - run: yarn --frozen-lockfile
     - run: yarn prebuild --arch x64
-    - run: yarn prebuild --arch arm64
+    # - run: yarn prebuild --arch arm64
     - uses: actions/upload-artifact@v3
       with:
         name: windows
