@@ -13,6 +13,9 @@ void dispatch_proc(uiohook_event* const event) {
 
   uiohook_event* copied_event = malloc(sizeof(uiohook_event));
   memcpy(copied_event, event, sizeof(uiohook_event));
+  if (copied_event->type == EVENT_MOUSE_DRAGGED) {
+    copied_event->type = EVENT_MOUSE_MOVED;
+  }
 
   napi_status status = napi_call_threadsafe_function(threadsafe_fn, copied_event, napi_tsfn_nonblocking);
   if (status == napi_closing) {
