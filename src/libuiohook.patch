@@ -1,42 +1,16 @@
 diff --git a/src/windows/input_helper.c b/src/windows/input_helper.c
-index 8242916..d4acd5f 100644
+index 8242916..0afd395 100644
 --- a/src/windows/input_helper.c
 +++ b/src/windows/input_helper.c
-@@ -297,34 +297,6 @@ unsigned short keycode_to_scancode(DWORD vk_code, DWORD flags) {
-     // NOTE vk_code >= 0 is assumed because DWORD is unsigned.
+@@ -298,7 +298,7 @@ unsigned short keycode_to_scancode(DWORD vk_code, DWORD flags) {
      if (vk_code < sizeof(keycode_scancode_table) / sizeof(keycode_scancode_table[0])) {
          scancode = keycode_scancode_table[vk_code][0];
--
--        if (flags & LLKHF_EXTENDED) {
--            logger(LOG_LEVEL_DEBUG, "%s [%u]: Using extended lookup for vk_code: %li\n",
--                    __FUNCTION__, __LINE__, vk_code);
--
--            switch (vk_code) {
--                case VK_PRIOR:
--                case VK_NEXT:
--                case VK_END:
--                case VK_HOME:
--                case VK_LEFT:
--                case VK_UP:
--                case VK_RIGHT:
--                case VK_DOWN:
--
--                case VK_INSERT:
--                case VK_DELETE:
--                    scancode |= 0xEE00;
--                    break;
--
--                case VK_RETURN:
--                    scancode |= 0x0E00;
--                    break;
--            }
--        } else {
--            logger(LOG_LEVEL_DEBUG, "%s [%u]: Using normal lookup for vk_code: %li\n",
--                    __FUNCTION__, __LINE__, vk_code);
--        }
-     }
  
-     return scancode;
+-        if (flags & LLKHF_EXTENDED) {
++        if (!(flags & LLKHF_EXTENDED)) {
+             logger(LOG_LEVEL_DEBUG, "%s [%u]: Using extended lookup for vk_code: %li\n",
+                     __FUNCTION__, __LINE__, vk_code);
+ 
 diff --git a/src/windows/input_hook.c b/src/windows/input_hook.c
 index b9e9161..048cf0f 100644
 --- a/src/windows/input_hook.c
