@@ -3,7 +3,7 @@ name: Prebuild
 on: push
 
 jobs:
-  windows:
+  prebuild-windows:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
@@ -19,7 +19,7 @@ jobs:
         name: windows
         path: prebuilds
 
-  linux:
+  prebuild-linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -38,7 +38,7 @@ jobs:
         name: linux
         path: prebuilds
 
-  darwin:
+  prebuild-darwin:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
@@ -53,3 +53,36 @@ jobs:
       with:
         name: darwin
         path: prebuilds
+
+  build-package:
+    needs:
+    - prebuild-windows
+    - prebuild-linux
+    - prebuild-darwin
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - uses: actions/download-artifact@v3
+      with:
+        name: windows
+        path: prebuilds
+    - uses: actions/download-artifact@v3
+      with:
+        name: linux
+        path: prebuilds
+    - uses: actions/download-artifact@v3
+      with:
+        name: darwin
+        path: prebuilds
+    - uses: actions/setup-node@v3
+    - run: yarn apply-libuiohook-patch
+    - run: yarn --frozen-lockfile
+    - run: yarn tsc
+    - run: npm pack
+    - uses: actions/upload-artifact@v3
+      with:
+        name: package
+        path: uiohook-napi-*.tgz
+        retention-days: 3
