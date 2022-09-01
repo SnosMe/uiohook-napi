@@ -187,7 +187,10 @@ export const UiohookKey = {
   Shift: 0x002A, // Left
   ShiftRight: 0x0036,
   Meta: 0x0E5B,
-  MetaRight: 0x0E5C
+  MetaRight: 0x0E5C,
+  NumLock: 0x0045,
+  ScrollLock: 0x0046,
+  PrintScreen: 0x0E37,
 } as const
 
 declare interface UiohookNapi {
