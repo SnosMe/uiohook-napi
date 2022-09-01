@@ -78,7 +78,7 @@ jobs:
         path: prebuilds
     - uses: actions/setup-node@v3
     - run: yarn apply-libuiohook-patch
-    - run: yarn --frozen-lockfile
+    - run: yarn --frozen-lockfile --ignore-scripts
     - run: yarn tsc
     - run: npm pack
     - uses: actions/upload-artifact@v3
