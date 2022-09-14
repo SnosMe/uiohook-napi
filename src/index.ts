@@ -26,6 +26,7 @@ export enum EventType {
 
 export interface UiohookKeyboardEvent {
   type: EventType.EVENT_KEY_PRESSED | EventType.EVENT_KEY_RELEASED
+  time: number
   altKey: boolean
   ctrlKey: boolean
   metaKey: boolean
@@ -38,6 +39,7 @@ export interface UiohookMouseEvent {
     EventType.EVENT_MOUSE_MOVED |
     EventType.EVENT_MOUSE_PRESSED |
     EventType.EVENT_MOUSE_RELEASED
+  time: number
   altKey: boolean
   ctrlKey: boolean
   metaKey: boolean
@@ -50,6 +52,7 @@ export interface UiohookMouseEvent {
 
 export interface UiohookWheelEvent {
   type: EventType.EVENT_MOUSE_WHEEL
+  time: number
   altKey: boolean
   ctrlKey: boolean
   metaKey: boolean

@@ -53,6 +53,10 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
   status = napi_get_boolean(env, (event->mask & (MASK_SHIFT)), &e_shiftKey);
   NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_get_boolean");
 
+  napi_value e_time;
+  status = napi_create_double(env, (double)event->time, &e_time);
+  NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_double");
+
   if (event->type == EVENT_KEY_PRESSED || event->type == EVENT_KEY_RELEASED) {
     napi_value e_keycode;
     status = napi_create_uint32(env, event->data.keyboard.keycode, &e_keycode);
@@ -60,6 +64,7 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
 
     napi_property_descriptor descriptors[] = {
       { "type",     NULL, NULL, NULL, NULL, e_type,     napi_enumerable, NULL },
+      { "time",     NULL, NULL, NULL, NULL, e_time,     napi_enumerable, NULL },
       { "altKey",   NULL, NULL, NULL, NULL, e_altKey,   napi_enumerable, NULL },
       { "ctrlKey",  NULL, NULL, NULL, NULL, e_ctrlKey,  napi_enumerable, NULL },
       { "metaKey",  NULL, NULL, NULL, NULL, e_metaKey,  napi_enumerable, NULL },
@@ -89,6 +94,7 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
 
     napi_property_descriptor descriptors[] = {
       { "type",     NULL, NULL, NULL, NULL, e_type,     napi_enumerable, NULL },
+      { "time",     NULL, NULL, NULL, NULL, e_time,     napi_enumerable, NULL },
       { "altKey",   NULL, NULL, NULL, NULL, e_altKey,   napi_enumerable, NULL },
       { "ctrlKey",  NULL, NULL, NULL, NULL, e_ctrlKey,  napi_enumerable, NULL },
       { "metaKey",  NULL, NULL, NULL, NULL, e_metaKey,  napi_enumerable, NULL },
@@ -129,6 +135,7 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
 
     napi_property_descriptor descriptors[] = {
       { "type",      NULL, NULL, NULL, NULL, e_type,      napi_enumerable, NULL },
+      { "time",      NULL, NULL, NULL, NULL, e_time,      napi_enumerable, NULL },
       { "altKey",    NULL, NULL, NULL, NULL, e_altKey,    napi_enumerable, NULL },
       { "ctrlKey",   NULL, NULL, NULL, NULL, e_ctrlKey,   napi_enumerable, NULL },
       { "metaKey",   NULL, NULL, NULL, NULL, e_metaKey,   napi_enumerable, NULL },
