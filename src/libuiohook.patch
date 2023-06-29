@@ -1,5 +1,5 @@
 diff --git a/src/windows/input_helper.c b/src/windows/input_helper.c
-index 8242916..0afd395 100644
+index e690021..4b7cff1 100644
 --- a/src/windows/input_helper.c
 +++ b/src/windows/input_helper.c
 @@ -298,7 +298,7 @@ unsigned short keycode_to_scancode(DWORD vk_code, DWORD flags) {
@@ -12,7 +12,7 @@ index 8242916..0afd395 100644
                      __FUNCTION__, __LINE__, vk_code);
  
 diff --git a/src/windows/input_hook.c b/src/windows/input_hook.c
-index b9e9161..048cf0f 100644
+index db1e79e..264a71b 100644
 --- a/src/windows/input_hook.c
 +++ b/src/windows/input_hook.c
 @@ -23,10 +23,20 @@
@@ -56,7 +56,7 @@ index b9e9161..048cf0f 100644
      return current_modifiers;
  }
  
-@@ -87,27 +102,26 @@ static void initialize_modifiers() {
+@@ -87,31 +102,49 @@ static void initialize_modifiers() {
      current_modifiers = 0x0000;
  
      // NOTE We are checking the high order bit, so it will be < 0 for a singed short.
@@ -96,24 +96,16 @@ index b9e9161..048cf0f 100644
 +    if (GetAsyncKeyState(VK_NUMLOCK)  < 0) { set_modifier_mask(MASK_NUM_LOCK);    }
 +    if (GetAsyncKeyState(VK_CAPITAL)  < 0) { set_modifier_mask(MASK_CAPS_LOCK);   }
 +    if (GetAsyncKeyState(VK_SCROLL)   < 0) { set_modifier_mask(MASK_SCROLL_LOCK); }
- }
- 
--
- /* Retrieves the mouse wheel scroll type. This function cannot be included as
-  * part of the input_helper.h due to platform specific calling restrictions.
-  */
-@@ -142,11 +156,29 @@ static uint16_t get_scroll_wheel_amount() {
-     return value;
- }
- 
++}
++
 +void check_and_update_uipi_state(HWND hwnd) {
 +    SetLastError(ERROR_SUCCESS);
 +    PostMessage(hwnd, WM_UIOHOOK_UIPI_TEST, 0, 0);
 +    if (GetLastError() == ERROR_ACCESS_DENIED) {
 +        is_blocked_by_uipi = true;
 +    }
-+}
-+
+ }
+ 
  void unregister_running_hooks() {
      // Stop the event hook and any timer still running.
 -    if (win_event_hhook != NULL) {
@@ -135,7 +127,7 @@ index b9e9161..048cf0f 100644
      }
  
      // Destroy the native hooks.
-@@ -228,31 +260,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
+@@ -193,31 +226,14 @@ static void process_key_pressed(KBDLLHOOKSTRUCT *kbhook) {
      // Populate key pressed event.
      dispatch_event(&event);
  
@@ -173,7 +165,7 @@ index b9e9161..048cf0f 100644
      }
  }
  
-@@ -621,40 +636,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
+@@ -594,40 +610,17 @@ LRESULT CALLBACK mouse_hook_event_proc(int nCode, WPARAM wParam, LPARAM lParam)
  
  // Callback function that handles events.
  void CALLBACK win_hook_event_proc(HWINEVENTHOOK hook, DWORD event, HWND hWnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime) {
@@ -223,7 +215,7 @@ index b9e9161..048cf0f 100644
      }
  }
  
-@@ -687,17 +679,22 @@ UIOHOOK_API int hook_run() {
+@@ -660,17 +653,22 @@ UIOHOOK_API int hook_run() {
      keyboard_event_hhook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboard_hook_event_proc, hInst, 0);
      mouse_event_hhook = SetWindowsHookEx(WH_MOUSE_LL, mouse_hook_event_proc, hInst, 0);
  
@@ -254,7 +246,7 @@ index b9e9161..048cf0f 100644
              logger(LOG_LEVEL_WARN, "%s [%u]: SetWinEventHook() failed!\n",
                      __FUNCTION__, __LINE__);
          }
-@@ -705,9 +702,6 @@ UIOHOOK_API int hook_run() {
+@@ -678,9 +676,6 @@ UIOHOOK_API int hook_run() {
          logger(LOG_LEVEL_DEBUG, "%s [%u]: SetWindowsHookEx() successful.\n",
                  __FUNCTION__, __LINE__);
  
@@ -265,7 +257,7 @@ index b9e9161..048cf0f 100644
          status = UIOHOOK_SUCCESS;
  
 diff --git a/src/x11/input_hook.c b/src/x11/input_hook.c
-index 3d00990..fa5e1d4 100644
+index 15c9b9e..dc2f7b9 100644
 --- a/src/x11/input_hook.c
 +++ b/src/x11/input_hook.c
 @@ -26,8 +26,11 @@
