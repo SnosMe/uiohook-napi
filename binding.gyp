@@ -25,6 +25,9 @@
       ],
       "conditions": [
         ['OS=="win"', {
+          'defines': [
+            'USE_EPOCH_TIME'
+          ],
           'sources': [
             'libuiohook/src/windows/input_helper.c',
             'libuiohook/src/windows/input_hook.c',
@@ -38,7 +41,7 @@
         }],
         ['OS=="linux"', {
           'defines': [
-            'USE_XRANDR', 'USE_EVDEV', 'USE_XT'
+            'USE_XRANDR', 'USE_EVDEV', 'USE_XT', 'USE_EPOCH_TIME'
           ],
           'link_settings': {
             'libraries': [
@@ -59,7 +62,7 @@
         }],
         ['OS=="mac"', {
           "defines":[
-            "__MACOSX_CORE__","USE_IOKIT","USE_APPLICATION_SERVICES","USE_APPKIT"
+            "__MACOSX_CORE__","USE_IOKIT","USE_APPLICATION_SERVICES","USE_APPKIT","USE_EPOCH_TIME"
           ],
           "link_settings": {
             "libraries": [
