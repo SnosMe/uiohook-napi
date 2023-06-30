@@ -29,6 +29,7 @@
             'libuiohook/src/windows/input_helper.c',
             'libuiohook/src/windows/input_hook.c',
             'libuiohook/src/windows/post_event.c',
+            'libuiohook/src/windows/dispatch_event.c',
             'libuiohook/src/windows/system_properties.c'
           ],
           'include_dirs': [
@@ -49,6 +50,7 @@
             'libuiohook/src/x11/input_helper.c',
             'libuiohook/src/x11/input_hook.c',
             'libuiohook/src/x11/post_event.c',
+            'libuiohook/src/x11/dispatch_event.c',
             'libuiohook/src/x11/system_properties.c'
           ],
           'include_dirs': [
@@ -57,7 +59,7 @@
         }],
         ['OS=="mac"', {
           "defines":[
-            "__MACOSX_CORE__","USE_IOKIT","USE_APPLICATION_SERVICES","USE_OBJC"
+            "__MACOSX_CORE__","USE_IOKIT","USE_APPLICATION_SERVICES","USE_APPKIT"
           ],
           "link_settings": {
             "libraries": [
@@ -73,6 +75,7 @@
             "libuiohook/src/darwin/input_helper.c",
             "libuiohook/src/darwin/input_hook.c",
             "libuiohook/src/darwin/post_event.c",
+            "libuiohook/src/darwin/dispatch_event.c",
             "libuiohook/src/darwin/system_properties.c"
           ],
           'include_dirs': [

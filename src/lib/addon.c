@@ -8,7 +8,7 @@
 static napi_threadsafe_function threadsafe_fn = NULL;
 static bool is_worker_running = false;
 
-void dispatch_proc(uiohook_event* const event) {
+void dispatch_proc(uiohook_event* const event, void* userdata) {
   if (threadsafe_fn == NULL) return;
 
   uiohook_event* copied_event = malloc(sizeof(uiohook_event));
@@ -117,12 +117,8 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
     status = napi_create_int32(env, event->data.wheel.y, &e_y);
     NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_int32");
 
-    napi_value e_clicks;
-    status = napi_create_uint32(env, event->data.wheel.clicks, &e_clicks);
-    NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
-
-    napi_value e_amount;
-    status = napi_create_uint32(env, event->data.wheel.amount, &e_amount);
+    napi_value e_delta;
+    status = napi_create_uint32(env, event->data.wheel.delta, &e_delta);
     NAPI_FATAL_IF_FAILED(status, "uiohook_to_js_event", "napi_create_uint32");
 
     napi_value e_direction;
@@ -142,8 +138,7 @@ napi_value uiohook_to_js_event(napi_env env, uiohook_event* event) {
       { "shiftKey",  NULL, NULL, NULL, NULL, e_shiftKey,  napi_enumerable, NULL },
       { "x",         NULL, NULL, NULL, NULL, e_x,         napi_enumerable, NULL },
       { "y",         NULL, NULL, NULL, NULL, e_y,         napi_enumerable, NULL },
-      { "clicks",    NULL, NULL, NULL, NULL, e_clicks,    napi_enumerable, NULL },
-      { "amount",    NULL, NULL, NULL, NULL, e_amount,    napi_enumerable, NULL },
+      { "delta",     NULL, NULL, NULL, NULL, e_delta,    napi_enumerable, NULL },
       { "direction", NULL, NULL, NULL, NULL, e_direction, napi_enumerable, NULL },
       { "rotation",  NULL, NULL, NULL, NULL, e_rotation,  napi_enumerable, NULL },
     };

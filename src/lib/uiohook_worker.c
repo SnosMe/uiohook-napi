@@ -43,7 +43,7 @@ bool logger_proc(unsigned int level, const char* format, ...) {
 // Furthermore, some operating systems may choose to disable your hook if it 
 // takes to long to process.  If you need to do any extended processing, please 
 // do so by copying the event to your own queued dispatch thread.
-void worker_dispatch_proc(uiohook_event* const event) {
+void worker_dispatch_proc(uiohook_event* const event, void* userdata) {
   switch (event->type) {
   case EVENT_HOOK_ENABLED:
     // Lock the running mutex so we know if the hook is enabled.
@@ -72,7 +72,7 @@ void worker_dispatch_proc(uiohook_event* const event) {
   case EVENT_MOUSE_MOVED:
   case EVENT_MOUSE_DRAGGED:
   case EVENT_MOUSE_WHEEL: {
-    user_dispatcher(event);
+    user_dispatcher(event, userdata);
     break;
   }
 
@@ -164,10 +164,10 @@ int uiohook_worker_start(dispatcher_t dispatch_proc) {
   uv_cond_init(&hook_control_cond);
 
   // Set the logger callback for library output.
-  hook_set_logger_proc(logger_proc);
+  hook_set_logger_proc(logger_proc, NULL);
 
   // Set the event callback for uiohook events.
-  hook_set_dispatch_proc(worker_dispatch_proc);
+  hook_set_dispatch_proc(worker_dispatch_proc, NULL);
 
   user_dispatcher = dispatch_proc;
 
