@@ -4,85 +4,85 @@ on: push
 
 jobs:
   prebuild-windows:
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - uses: actions/setup-node@v3
-    - run: yarn apply-libuiohook-patch
-    - run: yarn --frozen-lockfile
-    - run: yarn prebuild --arch x64
-    # - run: yarn prebuild --arch arm64
-    - uses: actions/upload-artifact@v3
-      with:
-        name: windows
-        path: prebuilds
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-node@v3
+      - run: yarn apply-libuiohook-patch
+      - run: yarn --frozen-lockfile
+      - run: yarn prebuild --arch x64
+      # - run: yarn prebuild --arch arm64
+      - uses: actions/upload-artifact@v3
+        with:
+          name: windows
+          path: prebuilds
 
   prebuild-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - uses: actions/setup-node@v3
-    - run: |
-        sudo apt-get update
-        sudo apt-get install -y libxrandr-dev libxtst-dev
-    - run: yarn apply-libuiohook-patch
-    - run: yarn --frozen-lockfile
-    - run: yarn prebuild --arch x64
-    - run: yarn prebuild --arch arm64
-    - uses: actions/upload-artifact@v3
-      with:
-        name: linux
-        path: prebuilds
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-node@v3
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y libxrandr-dev libxtst-dev
+      - run: yarn apply-libuiohook-patch
+      - run: yarn --frozen-lockfile
+      - run: yarn prebuild --arch x64
+      - run: yarn prebuild --arch arm64
+      - uses: actions/upload-artifact@v3
+        with:
+          name: linux
+          path: prebuilds
 
   prebuild-darwin:
-    runs-on: macos-latest
+    runs-on: macos-12
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - uses: actions/setup-node@v3
-    - run: yarn apply-libuiohook-patch
-    - run: yarn --frozen-lockfile
-    - run: yarn prebuild --arch x64
-    - run: yarn prebuild --arch arm64
-    - uses: actions/upload-artifact@v3
-      with:
-        name: darwin
-        path: prebuilds
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-node@v3
+      - run: yarn apply-libuiohook-patch
+      - run: yarn --frozen-lockfile
+      - run: yarn prebuild --arch x64
+      - run: yarn prebuild --arch arm64
+      - uses: actions/upload-artifact@v3
+        with:
+          name: darwin
+          path: prebuilds
 
   build-package:
     needs:
-    - prebuild-windows
-    - prebuild-linux
-    - prebuild-darwin
+      - prebuild-windows
+      - prebuild-linux
+      - prebuild-darwin
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - uses: actions/download-artifact@v3
-      with:
-        name: windows
-        path: prebuilds
-    - uses: actions/download-artifact@v3
-      with:
-        name: linux
-        path: prebuilds
-    - uses: actions/download-artifact@v3
-      with:
-        name: darwin
-        path: prebuilds
-    - uses: actions/setup-node@v3
-    - run: yarn apply-libuiohook-patch
-    - run: yarn --frozen-lockfile --ignore-scripts
-    - run: yarn tsc
-    - run: npm pack
-    - uses: actions/upload-artifact@v3
-      with:
-        name: package
-        path: uiohook-napi-*.tgz
-        retention-days: 3
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/download-artifact@v3
+        with:
+          name: windows
+          path: prebuilds
+      - uses: actions/download-artifact@v3
+        with:
+          name: linux
+          path: prebuilds
+      - uses: actions/download-artifact@v3
+        with:
+          name: darwin
+          path: prebuilds
+      - uses: actions/setup-node@v3
+      - run: yarn apply-libuiohook-patch
+      - run: yarn --frozen-lockfile --ignore-scripts
+      - run: yarn tsc
+      - run: npm pack
+      - uses: actions/upload-artifact@v3
+        with:
+          name: package
+          path: uiohook-napi-*.tgz
+          retention-days: 3
