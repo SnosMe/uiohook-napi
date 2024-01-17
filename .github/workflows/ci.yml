@@ -10,6 +10,7 @@ jobs:
       with:
         submodules: true
     - uses: actions/setup-node@v3
+    - run: npm install --global node-gyp
     - run: yarn apply-libuiohook-patch
     - run: yarn --frozen-lockfile
     - run: yarn prebuild --arch x64
