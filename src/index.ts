@@ -138,6 +138,7 @@ export const UiohookKey = {
   NumpadSubtract: 0x004A,
   NumpadDecimal: 0x0053,
   NumpadDivide: 0x0E35,
+  NumpadEnter: 0x0E1C,
   NumpadEnd: 0xEE00 | 0x004F,
   NumpadArrowDown: 0xEE00 | 0x0050,
   NumpadPageDown: 0xEE00 | 0x0051,
