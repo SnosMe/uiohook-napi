@@ -73,7 +73,7 @@ export enum WheelDirection {
 export const UiohookKey = {
   Backspace: 0x000E,
   Tab: 0x000F,
-  Enter: 0x0E1C,
+  Enter: 0x001C,
   CapsLock: 0x003A,
   Escape: 0x0001,
   Space: 0x0039,
@@ -138,7 +138,7 @@ export const UiohookKey = {
   NumpadSubtract: 0x004A,
   NumpadDecimal: 0x0053,
   NumpadDivide: 0x0E35,
-  NumpadEnter: 0x001C,
+  NumpadEnter: 0x0E00 | 0x001C,
   NumpadEnd: 0xEE00 | 0x004F,
   NumpadArrowDown: 0xEE00 | 0x0050,
   NumpadPageDown: 0xEE00 | 0x0051,
