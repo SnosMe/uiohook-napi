@@ -132,6 +132,7 @@ int hook_enable() {
       // Get the status back from the thread.
       uv_thread_join(&hook_thread);
       status = hook_thread_status;
+      uv_mutex_unlock(&hook_running_mutex);
     }
     else {
       // Lock Failure; The hook is currently running and wait was signaled
