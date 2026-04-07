@@ -15,6 +15,7 @@ enum KeyToggle {
 }
 
 export enum EventType {
+  EVENT_KEY_TYPED = 3,
   EVENT_KEY_PRESSED = 4,
   EVENT_KEY_RELEASED = 5,
   EVENT_MOUSE_CLICKED = 6,
@@ -25,13 +26,14 @@ export enum EventType {
 }
 
 export interface UiohookKeyboardEvent {
-  type: EventType.EVENT_KEY_PRESSED | EventType.EVENT_KEY_RELEASED
+  type: EventType.EVENT_KEY_TYPED | EventType.EVENT_KEY_PRESSED | EventType.EVENT_KEY_RELEASED
   time: number
   altKey: boolean
   ctrlKey: boolean
   metaKey: boolean
   shiftKey: boolean
   keycode: number
+  keychar: number
 }
 
 export interface UiohookMouseEvent {
@@ -202,7 +204,7 @@ declare interface UiohookNapi {
 
   on(event: 'keydown', listener: (e: UiohookKeyboardEvent) => void): this
   on(event: 'keyup', listener: (e: UiohookKeyboardEvent) => void): this
-
+  on(event: 'keytyped', listener: (e: UiohookKeyboardEvent) => void): this
   on(event: 'mousedown', listener: (e: UiohookMouseEvent) => void): this
   on(event: 'mouseup', listener: (e: UiohookMouseEvent) => void): this
   on(event: 'mousemove', listener: (e: UiohookMouseEvent) => void): this
@@ -215,6 +217,9 @@ class UiohookNapi extends EventEmitter {
   private handler (e: UiohookKeyboardEvent | UiohookMouseEvent | UiohookWheelEvent) {
     this.emit('input', e)
     switch (e.type) {
+      case EventType.EVENT_KEY_TYPED:
+        this.emit('keytyped', e)
+        break
       case EventType.EVENT_KEY_PRESSED:
         this.emit('keydown', e)
         break
