@@ -29,11 +29,17 @@ jobs:
     - uses: actions/setup-node@v6
     - run: |
         sudo apt-get update
-        sudo apt-get install -y libxrandr-dev libxtst-dev
+        sudo apt-get install -y \
+          libxrandr-dev libxtst-dev \
+          gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
     - run: npm run apply-libuiohook-patch
     - run: npm ci
     - run: npm run prebuild -- --arch x64
     - run: npm run prebuild -- --arch arm64
+      env:
+        CC: aarch64-linux-gnu-gcc
+        CXX: aarch64-linux-gnu-g++
+        LDFLAGS: -Wl,--allow-shlib-undefined
     - run: npm run prebuild -- --arch loong64
     - uses: actions/upload-artifact@v6
       with:
