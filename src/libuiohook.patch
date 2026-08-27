@@ -1,3 +1,96 @@
+diff --git a/src/darwin/input_hook.c b/src/darwin/input_hook.c
+index e6cd6ce..e9e997c 100644
+--- a/src/darwin/input_hook.c
++++ b/src/darwin/input_hook.c
+@@ -272,59 +272,24 @@ static inline void process_key_pressed(uint64_t timestamp, CGEventRef event_ref)
+     if (event.reserved ^ 0x01) {
+         tis_keycode_message->event = event_ref;
+         tis_keycode_message->length = 0;
+-        bool is_runloop_main = CFEqual(event_loop, CFRunLoopGetMain());
+-
+-        if (dispatch_sync_f_f != NULL && dispatch_main_queue_s != NULL && !is_runloop_main) {
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Using dispatch_sync_f for key typed events.\n",
+-                    __FUNCTION__, __LINE__);
+-            (*dispatch_sync_f_f)(dispatch_main_queue_s, tis_keycode_message, &keycode_to_lookup);
+-        }
+-        #if !defined(USE_CARBON_LEGACY) && defined(USE_APPLICATION_SERVICES)
+-        else if (!is_runloop_main) {
+-            logger(LOG_LEVEL_DEBUG, "%s [%u]: Using CFRunLoopWakeUp for key typed events.\n",
+-                    __FUNCTION__, __LINE__);
+-
+-            // Lock for code dealing with the main runloop.
+-            pthread_mutex_lock(&main_runloop_mutex);
+-
+-            // Check to see if the main runloop is still running.
+-            // TODO I would rather this be a check on hook_enable(),
+-            // but it makes the usage complicated by requiring a separate
+-            // thread for the main runloop and hook registration.
+-            CFStringRef mode = CFRunLoopCopyCurrentMode(CFRunLoopGetMain());
+-            if (mode != NULL) {
+-                CFRelease(mode);
+-
+-                // Lookup the Unicode representation for this event.
+-                //CFRunLoopSourceContext context = { .version = 0 };
+-                //CFRunLoopSourceGetContext(main_runloop_keycode->source, &context);
+-
+-                // Get the run loop context info pointer.
+-                //TISKeycodeMessage *info = (TISKeycodeMessage *) context.info;
+-
+-                // Set the event pointer.
+-                //info->event = event_ref;
+ 
+-
+-                // Signal the custom source and wakeup the main runloop.
+-                CFRunLoopSourceSignal(main_runloop_keycode->source);
+-                CFRunLoopWakeUp(CFRunLoopGetMain());
+-
+-                // Wait for a lock while the main runloop processes they key typed event.
+-                pthread_cond_wait(&main_runloop_cond, &main_runloop_mutex);
+-            }
+-            else {
+-                logger(LOG_LEVEL_WARN, "%s [%u]: Failed to signal RunLoop main!\n",
+-                        __FUNCTION__, __LINE__);
+-            }
+-
+-            // Unlock for code dealing with the main runloop.
+-            pthread_mutex_unlock(&main_runloop_mutex);
+-        }
+-        #endif
+-        else {
+-            keycode_to_lookup(tis_keycode_message);
+-        }
++        // NOTE Resolving the Unicode representation of a key requires a
++        // TIS (Text Input Source) lookup. When hook_run() is invoked from
++        // the process's real Cocoa main thread, that lookup is done
++        // in-thread directly below. When it isn't (e.g. a headless/daemon
++        // consumer that deliberately runs the hook off the main thread),
++        // this used to hand the lookup off to the main thread via
++        // dispatch_sync_f() to the GCD main queue, or failing that, a
++        // CFRunLoopWakeUp()+pthread_cond_wait() handshake with the main
++        // CFRunLoop. Both of those assume something is actively pumping
++        // the process's real main run loop / GCD main queue. If nothing
++        // is — which is the normal case for a non-GUI consumer of this
++        // library — the handoff blocks forever: the CGEventTap callback
++        // never returns and the tap is permanently disabled after the
++        // very first keystroke. Resolve directly on this thread instead;
++        // TIS lookups are safe to call off the main thread, so this
++        // sacrifices nothing but the (already best-effort) dispatch step.
++        keycode_to_lookup(tis_keycode_message);
+ 
+         for (unsigned int i = 0; i < tis_keycode_message->length; i++) {
+             // Populate key typed event.
+@@ -986,8 +951,9 @@ CGEventRef hook_event_proc(CGEventTapProxy tap_proxy, CGEventType type, CGEventR
+         default:
+             // Check for an old OS X bug where the tap seems to timeout for no reason.
+             // See: http://stackoverflow.com/questions/2969110/cgeventtapcreate-breaks-down-mysteriously-with-key-down-events#2971217
+-            if (type == (CGEventType) kCGEventTapDisabledByTimeout) {
+-                logger(LOG_LEVEL_WARN, "%s [%u]: CGEventTap timeout!\n",
++            if (type == (CGEventType) kCGEventTapDisabledByTimeout ||
++                    type == (CGEventType) kCGEventTapDisabledByUserInput) {
++                logger(LOG_LEVEL_WARN, "%s [%u]: CGEventTap disabled!\n",
+                         __FUNCTION__, __LINE__);
+ 
+                 // We need to re-enable the tap
 diff --git a/src/windows/input_helper.c b/src/windows/input_helper.c
 index e690021..0d383e0 100644
 --- a/src/windows/input_helper.c
