@@ -12,12 +12,25 @@
 
 #include "uiohook_worker.h"
 
+// Startup handshake state, guarded by hook_control_mutex.
+//
+// This replaces the previous use of hook_running_mutex as an implicit
+// "is the hook running" flag. A mutex cannot carry that information race-free:
+// trylock() answers "is it held right now", which is not the same question as
+// "has the hook finished starting", and the two diverge on exactly the
+// interleaving that used to deadlock (see hook_enable below).
+typedef enum {
+  HOOK_START_PENDING = 0,   // hook_run() has not reported anything yet
+  HOOK_START_RUNNING,       // EVENT_HOOK_ENABLED was dispatched
+  HOOK_START_FINISHED       // hook_run() returned; the thread is joinable
+} hook_start_state;
+
 // Thread and mutex variables.
 static uv_thread_t hook_thread;
 static int hook_thread_status;
-static uv_mutex_t hook_running_mutex;
 static uv_mutex_t hook_control_mutex;
 static uv_cond_t hook_control_cond;
+static hook_start_state hook_state;
 
 static dispatcher_t user_dispatcher = NULL;
 
@@ -46,21 +59,12 @@ bool logger_proc(unsigned int level, const char* format, ...) {
 void worker_dispatch_proc(uiohook_event* const event) {
   switch (event->type) {
   case EVENT_HOOK_ENABLED:
-    // Lock the running mutex so we know if the hook is enabled.
-    uv_mutex_lock(&hook_running_mutex);
-
-    // Signal control cond so hook_enable() can continue.
+    // Publish the state change and wake hook_enable(). The mutex is held only
+    // for the handoff itself, and is released before returning to hook_run().
     uv_mutex_lock(&hook_control_mutex);
+    hook_state = HOOK_START_RUNNING;
     uv_cond_signal(&hook_control_cond);
     uv_mutex_unlock(&hook_control_mutex);
-    break;
-
-  case EVENT_HOOK_DISABLED:
-    // Lock the control mutex until we exit.
-    uv_mutex_lock(&hook_control_mutex);
-
-    // Unlock the running mutex so we know if the hook is disabled.
-    uv_mutex_unlock(&hook_running_mutex);
     break;
 
   case EVENT_KEY_PRESSED:
@@ -105,53 +109,63 @@ void hook_thread_proc(void* arg) {
   // Set the hook status.
   hook_thread_status = hook_run();
 
-  // Make sure we signal that we have passed any exception throwing code for
-  // the waiting hook_enable().
+  // hook_run() has returned, so the hook is no longer running whatever it
+  // reported on the way in. This is set unconditionally, overwriting
+  // HOOK_START_RUNNING if EVENT_HOOK_ENABLED was already dispatched: if the
+  // hook enabled and then stopped before hook_enable() observed the first
+  // signal, "the thread has exited" is the more useful answer, and it keeps
+  // hook_enable() from returning success for a thread nobody will ever join.
+  //
+  // The mutex is acquired here rather than inherited from EVENT_HOOK_DISABLED:
+  // unlocking a mutex this thread never locked is undefined behaviour, and
+  // signalling without holding it allowed the wakeup to be lost entirely.
+  uv_mutex_lock(&hook_control_mutex);
+  hook_state = HOOK_START_FINISHED;
   uv_cond_signal(&hook_control_cond);
   uv_mutex_unlock(&hook_control_mutex);
 }
 
 int hook_enable() {
-  // Lock the thread control mutex.  This will be unlocked when the
-  // thread has finished starting, or when it has fully stopped.
+  // Lock the thread control mutex. This is held across the whole handshake so
+  // the state cannot change between the wait and the decision.
   uv_mutex_lock(&hook_control_mutex);
 
-  // Set the initial status.
-  int status = UIOHOOK_FAILURE;
+  hook_state = HOOK_START_PENDING;
 
-  if (uv_thread_create(&hook_thread, hook_thread_proc, NULL) == 0) {
-    // Wait for the thread to indicate that it has passed the 
-    // initialization portion by blocking until either a EVENT_HOOK_ENABLED 
-    // event is received or the thread terminates.
+  if (uv_thread_create(&hook_thread, hook_thread_proc, NULL) != 0) {
+    uv_mutex_unlock(&hook_control_mutex);
+    return UIOHOOK_ERROR_THREAD_CREATE;
+  }
+
+  // Wait for the hook thread to either report itself enabled or exit.
+  //
+  // The predicate loop is required, not defensive: uv_cond_wait() is permitted
+  // to wake spuriously. The previous code treated any wakeup as a decision
+  // point and asked uv_mutex_trylock(&hook_running_mutex) what had happened. On
+  // a premature wakeup that trylock SUCCEEDS -- the hook thread has not reached
+  // EVENT_HOOK_ENABLED yet, so nothing holds the mutex -- which reads as
+  // "startup problem" and calls uv_thread_join() while holding both mutexes the
+  // hook thread needs to complete EVENT_HOOK_ENABLED. Neither side can proceed,
+  // and for an Electron/GUI consumer the thread stuck in that join is the main
+  // thread: the application hangs at startup and stops responding to signals.
+  while (hook_state == HOOK_START_PENDING) {
     uv_cond_wait(&hook_control_cond, &hook_control_mutex);
-
-    if (uv_mutex_trylock(&hook_running_mutex) == 0) {
-      // Lock Successful; The hook is not running but the hook_control_cond 
-      // was signaled!  This indicates that there was a startup problem!
-
-      // Get the status back from the thread.
-      uv_thread_join(&hook_thread);
-      status = hook_thread_status;
-      uv_mutex_unlock(&hook_running_mutex);
-    }
-    else {
-      // Lock Failure; The hook is currently running and wait was signaled
-      // indicating that we have passed all possible start checks.  We can 
-      // always assume a successful startup at this point.
-      status = UIOHOOK_SUCCESS;
-    }
-
-    logger_proc(LOG_LEVEL_DEBUG, "%s [%u]: Thread Result: (%#X).\n",
-      __FUNCTION__, __LINE__, status);
-  }
-  else {
-    status = UIOHOOK_ERROR_THREAD_CREATE;
   }
 
-  // Make sure the control mutex is unlocked.
+  hook_start_state state = hook_state;
   uv_mutex_unlock(&hook_control_mutex);
 
-  return status;
+  if (state == HOOK_START_RUNNING) {
+    return UIOHOOK_SUCCESS;
+  }
+
+  // The thread has returned from hook_run() -- either it failed to start, or it
+  // started and stopped again before we got here. Both are reported by its own
+  // status. The join cannot block on the handshake, and it deliberately runs
+  // without the control mutex held, so it cannot block on anything the hook
+  // thread might still want.
+  uv_thread_join(&hook_thread);
+  return hook_thread_status;
 }
 
 
@@ -160,7 +174,6 @@ int uiohook_worker_start(dispatcher_t dispatch_proc) {
   // thread has finished starting, or when it has fully stopped.
 
   // Create event handles for the thread hook.
-  uv_mutex_init(&hook_running_mutex);
   uv_mutex_init(&hook_control_mutex);
   uv_cond_init(&hook_control_cond);
 
@@ -177,7 +190,6 @@ int uiohook_worker_start(dispatcher_t dispatch_proc) {
   int status = hook_enable();
   if (status != UIOHOOK_SUCCESS) {
     // Close event handles for the thread hook.
-    uv_mutex_destroy(&hook_running_mutex);
     uv_mutex_destroy(&hook_control_mutex);
     uv_cond_destroy(&hook_control_cond);
   }
@@ -192,7 +204,6 @@ int uiohook_worker_stop() {
     uv_thread_join(&hook_thread);
 
     // Close event handles for the thread hook.
-    uv_mutex_destroy(&hook_running_mutex);
     uv_mutex_destroy(&hook_control_mutex);
     uv_cond_destroy(&hook_control_cond);
   }
